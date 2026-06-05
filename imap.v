@@ -66,17 +66,19 @@ pub fn validate_config(config ImapConfig) !ImapConfig {
 }
 
 pub fn unread_count_from_search_response(response string) int {
-	mut total := 0
+	return parse_search_ids(response).len
+}
+
+pub fn parse_search_ids(response string) []string {
+	mut ids := []string{}
 	for line in response.split_into_lines() {
-		if line.trim_space().to_upper().starts_with('* SEARCH') {
-			total += search_ids(line).len
-		}
+		ids << search_ids(line)
 	}
-	return total
+	return ids
 }
 
 pub fn search_ids(line string) []string {
-	parts := line.trim_space().split(' ')
+	parts := imap_fields(line)
 	if parts.len < 2 || parts[0] != '*' || parts[1].to_upper() != 'SEARCH' {
 		return []string{}
 	}
@@ -88,6 +90,38 @@ pub fn search_ids(line string) []string {
 		}
 	}
 	return ids
+}
+
+pub fn fetch_rfc822_commands(message_ids []string, first_tag int) ![]ImapCommand {
+	id_set := message_id_set(message_ids)!
+	if id_set == '' {
+		return []ImapCommand{}
+	}
+	tag_number := normalized_tag_number(first_tag)
+	return [
+		ImapCommand{
+			tag:  imap_tag(tag_number)
+			text: 'FETCH ${id_set} (UID RFC822)'
+		},
+	]
+}
+
+pub fn delete_message_commands(message_ids []string, first_tag int) ![]ImapCommand {
+	id_set := message_id_set(message_ids)!
+	if id_set == '' {
+		return []ImapCommand{}
+	}
+	tag_number := normalized_tag_number(first_tag)
+	return [
+		ImapCommand{
+			tag:  imap_tag(tag_number)
+			text: 'STORE ${id_set} +FLAGS.SILENT (\\Deleted)'
+		},
+		ImapCommand{
+			tag:  imap_tag(tag_number + 1)
+			text: 'EXPUNGE'
+		},
+	]
 }
 
 pub fn inbox_probe_commands(config ImapConfig) ![]ImapCommand {
@@ -164,7 +198,7 @@ fn fetch_literal_size(header string) ?int {
 }
 
 fn fetch_sequence(header string) string {
-	parts := header.trim_space().split(' ')
+	parts := imap_fields(header)
 	if parts.len >= 2 {
 		return parts[1]
 	}
@@ -172,13 +206,46 @@ fn fetch_sequence(header string) string {
 }
 
 fn fetch_uid(header string) string {
-	parts := header.replace('(', ' ').replace(')', ' ').split(' ')
+	parts := imap_fields(header.replace('(', ' ').replace(')', ' '))
 	for i, part in parts {
 		if part.to_upper() == 'UID' && i + 1 < parts.len {
 			return parts[i + 1].trim_space()
 		}
 	}
 	return ''
+}
+
+fn message_id_set(message_ids []string) !string {
+	mut ids := []string{}
+	for message_id in message_ids {
+		id := message_id.trim_space()
+		if id == '' {
+			continue
+		}
+		if !id.bytes().all(it >= `0` && it <= `9`) {
+			return error('imap message id must be numeric')
+		}
+		ids << id
+	}
+	return ids.join(',')
+}
+
+fn imap_fields(value string) []string {
+	mut fields := []string{}
+	for part in value.trim_space().split(' ') {
+		clean := part.trim_space()
+		if clean != '' {
+			fields << clean
+		}
+	}
+	return fields
+}
+
+fn normalized_tag_number(first_tag int) int {
+	if first_tag > 0 {
+		return first_tag
+	}
+	return 1
 }
 
 fn imap_tag(number int) string {
