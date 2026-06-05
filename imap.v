@@ -92,26 +92,27 @@ pub fn search_ids(line string) []string {
 
 pub fn inbox_probe_commands(config ImapConfig) ![]ImapCommand {
 	clean := validate_config(config)!
-	mut commands := [
-		ImapCommand{
-			tag:  'A001'
-			text: 'LOGIN ${imap_quote(clean.username)} ${imap_quote(clean.password)}'
-		},
-	]
+	mut commands := []ImapCommand{}
+	mut next_tag := 1
 	if clean.starttls {
 		commands << ImapCommand{
-			tag:  'A002'
+			tag:  imap_tag(next_tag)
 			text: 'STARTTLS'
 		}
+		next_tag++
 	}
-	select_tag := if clean.starttls { 'A003' } else { 'A002' }
-	search_tag := if clean.starttls { 'A004' } else { 'A003' }
 	commands << ImapCommand{
-		tag:  select_tag
+		tag:  imap_tag(next_tag)
+		text: 'LOGIN ${imap_quote(clean.username)} ${imap_quote(clean.password)}'
+	}
+	next_tag++
+	commands << ImapCommand{
+		tag:  imap_tag(next_tag)
 		text: 'SELECT ${imap_quote(clean.folder)}'
 	}
+	next_tag++
 	commands << ImapCommand{
-		tag:  search_tag
+		tag:  imap_tag(next_tag)
 		text: 'SEARCH UNSEEN'
 	}
 	return commands
@@ -178,4 +179,8 @@ fn fetch_uid(header string) string {
 		}
 	}
 	return ''
+}
+
+fn imap_tag(number int) string {
+	return 'A${number:03}'
 }

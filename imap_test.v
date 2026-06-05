@@ -18,6 +18,20 @@ fn test_probe_commands_quote_credentials_and_folder() {
 	assert commands[2].text == 'SEARCH UNSEEN'
 }
 
+fn test_probe_commands_start_tls_before_login() {
+	commands := inbox_probe_commands(ImapConfig{
+		host:     'imap.example.test'
+		port:     143
+		username: 'user'
+		password: 'secret'
+		starttls: true
+	})!
+	assert commands[0].text == 'STARTTLS'
+	assert commands[1].text == 'LOGIN "user" "secret"'
+	assert commands[2].text == 'SELECT "INBOX"'
+	assert commands[3].text == 'SEARCH UNSEEN'
+}
+
 fn test_fetch_parser_extracts_uid_and_literal_message() {
 	raw := 'Subject: Hello\r\n\r\nBody'
 	response := '* 7 FETCH (UID 42 RFC822 {22}\r\n${raw})\r\nA004 OK FETCH completed\r\n'
