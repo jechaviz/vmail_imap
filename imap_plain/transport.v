@@ -48,6 +48,24 @@ pub fn fetch_unseen_messages(config vmail_imap.ImapConfig, options TransportOpti
 	return vmail_imap.parse_fetch_messages(response)
 }
 
+pub fn delete_messages_by_uid(config vmail_imap.ImapConfig, uids []string, options TransportOptions) ! {
+	delete_commands := vmail_imap.delete_uid_commands(uids, 1)!
+	if delete_commands.len == 0 {
+		return
+	}
+	mut conn := dial(config, options)!
+	mut tag_number := 1
+	defer {
+		logout(mut conn, tag_number) or {}
+		conn.close() or {}
+	}
+	tag_number = login_and_select(mut conn, config, tag_number)!
+	for command in vmail_imap.delete_uid_commands(uids, tag_number)! {
+		run_command(mut conn, command)!
+		tag_number++
+	}
+}
+
 fn dial(config vmail_imap.ImapConfig, options TransportOptions) !&net.TcpConn {
 	clean := vmail_imap.validate_config(config)!
 	if clean.ssl || clean.starttls {

@@ -63,6 +63,15 @@ fn test_delete_message_commands_mark_deleted_and_expunge() {
 	assert commands[1].text == 'EXPUNGE'
 }
 
+fn test_delete_uid_commands_mark_deleted_by_uid_and_expunge() {
+	commands := delete_uid_commands(['11', '12'], 7)!
+	assert commands.len == 2
+	assert commands[0].tag == 'A007'
+	assert commands[0].text == 'UID STORE 11,12 +FLAGS.SILENT (\\Deleted)'
+	assert commands[1].tag == 'A008'
+	assert commands[1].text == 'EXPUNGE'
+}
+
 fn test_command_planners_skip_empty_ids_and_reject_invalid_ids() {
 	assert fetch_rfc822_commands([' ', '9'], 0)![0].text == 'FETCH 9 (UID RFC822)'
 	assert delete_message_commands([], 2)!.len == 0

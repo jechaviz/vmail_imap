@@ -124,6 +124,24 @@ pub fn delete_message_commands(message_ids []string, first_tag int) ![]ImapComma
 	]
 }
 
+pub fn delete_uid_commands(uids []string, first_tag int) ![]ImapCommand {
+	uid_set := message_id_set(uids)!
+	if uid_set == '' {
+		return []ImapCommand{}
+	}
+	tag_number := normalized_tag_number(first_tag)
+	return [
+		ImapCommand{
+			tag:  imap_tag(tag_number)
+			text: 'UID STORE ${uid_set} +FLAGS.SILENT (\\Deleted)'
+		},
+		ImapCommand{
+			tag:  imap_tag(tag_number + 1)
+			text: 'EXPUNGE'
+		},
+	]
+}
+
 pub fn inbox_probe_commands(config ImapConfig) ![]ImapCommand {
 	clean := validate_config(config)!
 	mut commands := []ImapCommand{}

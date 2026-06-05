@@ -25,6 +25,7 @@ fn test_plain_transport_counts_and_fetches_unseen_messages() {
 	assert messages[0].raw.contains('Subject: One')
 	assert messages[1].uid == '12'
 	assert messages[1].raw.contains('Subject: Two')
+	delete_messages_by_uid(config, ['11', '12'], options)!
 }
 
 fn fake_imap_server(port_channel chan int) {
@@ -37,7 +38,7 @@ fn fake_imap_server(port_channel chan int) {
 		return
 	}
 	port_channel <- addr.str().all_after_last(':').int()
-	for _ in 0 .. 2 {
+	for _ in 0 .. 3 {
 		mut conn := listener.accept() or { return }
 		handle_fake_imap_connection(mut conn)
 		conn.close() or {}
@@ -66,6 +67,10 @@ fn handle_fake_imap_connection(mut conn net.TcpConn) {
 			response :=
 				'* 1 FETCH (UID 11 RFC822 {${raw_one.len}}\r\n${raw_one})\r\n' + '* 2 FETCH (UID 12 RFC822 {${raw_two.len}}\r\n${raw_two})\r\n' + '${tag} OK FETCH completed\r\n'
 			conn.write_string(response) or { return }
+		} else if upper.contains('UID STORE') {
+			conn.write_string('${tag} OK STORE completed\r\n') or { return }
+		} else if upper.contains('EXPUNGE') {
+			conn.write_string('* 1 EXPUNGE\r\n${tag} OK EXPUNGE completed\r\n') or { return }
 		} else if upper.contains('LOGOUT') {
 			conn.write_string('* BYE logging out\r\n${tag} OK LOGOUT completed\r\n') or { return }
 			return
