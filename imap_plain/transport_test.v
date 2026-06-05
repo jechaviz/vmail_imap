@@ -15,7 +15,7 @@ fn test_plain_transport_counts_and_fetches_unseen_messages() {
 		password: 'secret'
 		folder:   'INBOX'
 	}
-	options := TransportOptions{
+	options := vmail_imap.TransportOptions{
 		timeout_ms: 5_000
 	}
 	assert test_inbox_unread_count(config, options)! == 2

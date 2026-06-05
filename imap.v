@@ -266,6 +266,6 @@ fn normalized_tag_number(first_tag int) int {
 	return 1
 }
 
-fn imap_tag(number int) string {
+pub fn imap_tag(number int) string {
 	return 'A${number:03}'
 }
