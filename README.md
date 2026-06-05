@@ -2,6 +2,6 @@
 
 Pure V IMAP helper library.
 
-This package keeps protocol command construction and response parsing separate from
-socket transport so projects can test inbox synchronization without network
-credentials. It is designed to pair with `vmail_mime` for EML parsing.
+This package keeps protocol command construction and response parsing testable,
+and includes a small plain TCP IMAP transport for LOGIN, SELECT, SEARCH and FETCH.
+It is designed to pair with `vmail_mime` for EML parsing.
