@@ -68,14 +68,7 @@ fn imap_line_literal_size(line string) ?int {
 		return none
 	}
 	open := clean.last_index('{') or { return none }
-	mut raw := clean[open + 1..clean.len - 1].trim_space()
-	if raw.ends_with('+') {
-		raw = raw[..raw.len - 1].trim_space()
-	}
-	if raw == '' || !raw.bytes().all(it >= `0` && it <= `9`) {
-		return none
-	}
-	return raw.int()
+	return parse_imap_literal_size(clean[open + 1..clean.len - 1])
 }
 
 fn read_literal_bytes(mut stream ImapStream, size int) !string {

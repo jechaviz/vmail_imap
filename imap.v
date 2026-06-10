@@ -209,6 +209,14 @@ fn fetch_literal_size(header string) ?int {
 	open := header.last_index('{') or { return none }
 	close := header.index_after('}', open) or { return none }
 	raw := header[open + 1..close].trim_space()
+	return parse_imap_literal_size(raw)
+}
+
+fn parse_imap_literal_size(value string) ?int {
+	mut raw := value.trim_space()
+	if raw.ends_with('+') {
+		raw = raw[..raw.len - 1].trim_space()
+	}
 	if raw == '' || !raw.bytes().all(it >= `0` && it <= `9`) {
 		return none
 	}

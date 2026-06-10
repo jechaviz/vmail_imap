@@ -47,6 +47,16 @@ fn test_fetch_parser_extracts_uid_and_literal_message() {
 	assert messages[0].raw == raw
 }
 
+fn test_fetch_parser_accepts_literal_plus_size_like_reader() {
+	raw := 'Subject: Literal plus\r\n\r\nBody'
+	response := '* 3 FETCH (UID 77 RFC822 {${raw.len}+}\r\n${raw})\r\nA004 OK FETCH completed\r\n'
+	messages := parse_fetch_messages(response)
+	assert messages.len == 1
+	assert messages[0].seq == '3'
+	assert messages[0].uid == '77'
+	assert messages[0].raw == raw
+}
+
 fn test_fetch_rfc822_commands_plan_fetch_for_ids() {
 	commands := fetch_rfc822_commands(['2', '4', '8'], 4)!
 	assert commands.len == 1
