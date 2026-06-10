@@ -51,11 +51,49 @@ pub fn read_response(mut stream ImapStream, tag string) !string {
 			return error('imap connection closed before ${tag}')
 		}
 		response += line
+		if literal_size := imap_line_literal_size(line) {
+			response += read_literal_bytes(mut stream, literal_size)!
+			continue
+		}
 		if line.trim_space().starts_with('${tag} ') {
 			return response
 		}
 	}
 	return response
+}
+
+fn imap_line_literal_size(line string) ?int {
+	clean := line.trim_right('\r\n')
+	if !clean.ends_with('}') {
+		return none
+	}
+	open := clean.last_index('{') or { return none }
+	mut raw := clean[open + 1..clean.len - 1].trim_space()
+	if raw.ends_with('+') {
+		raw = raw[..raw.len - 1].trim_space()
+	}
+	if raw == '' || !raw.bytes().all(it >= `0` && it <= `9`) {
+		return none
+	}
+	return raw.int()
+}
+
+fn read_literal_bytes(mut stream ImapStream, size int) !string {
+	if size < 0 {
+		return error('imap literal size must be positive')
+	}
+	mut out := []u8{cap: size}
+	for out.len < size {
+		remaining := size - out.len
+		chunk_len := if remaining < 4096 { remaining } else { 4096 }
+		mut buffer := []u8{len: chunk_len}
+		read_count := stream.read(mut buffer)!
+		if read_count <= 0 {
+			return error('imap connection closed during literal')
+		}
+		out << buffer[..read_count]
+	}
+	return out.bytestr()
 }
 
 pub fn read_line(mut stream ImapStream) !string {

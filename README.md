@@ -9,4 +9,6 @@ for LOGIN, SELECT, SEARCH, FETCH, UID STORE and EXPUNGE. The
 transports on top of V's bundled mbedtls backend.
 
 Both transports share `vmail_imap.TransportOptions` and return raw RFC822
-messages that pair with `vmail_mime` for EML parsing.
+messages that pair with `vmail_mime` for EML parsing. Literal `FETCH` payloads
+are read by declared byte length, so mail bodies can safely contain lines that
+look like IMAP command tags.
